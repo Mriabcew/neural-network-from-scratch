@@ -23,13 +23,24 @@ class Network:
                 layer.weights -= lr * layer.dweights
                 layer.biases -= lr * layer.dbiases
 
-    def train(self, x, y, epochs, lr):
+    def train(self, x, y, epochs, lr, batch_size=32):
         for epoch in range(epochs):
-            y_pred = self.forward(x)
-            loss = -np.mean(np.sum(y * np.log(np.clip(y_pred, 1e-7, 1 - 1e-7)), axis=1))
-            grad = -y / np.clip(y_pred, 1e-7, 1 - 1e-7) / len(y)
-            self.backward(grad)
-            self.update(lr)
+            
+            indices = np.random.permutation(len(x))
+            x_shuffled = x[indices]
+            y_shuffled = y[indices]
+
+            for i in range(0, len(x), batch_size):
+                x_batch = x_shuffled[i:i+batch_size]
+                y_batch = y_shuffled[i:i+batch_size]
+
+                y_pred = self.forward(x_batch)
+                grad = (y_pred - y_batch) / len(y_batch)  # Softmax + CrossEntropy gradient
+                self.backward(grad)
+                self.update(lr)
+
             if epoch % 10 == 0:
-                acc = np.mean(np.argmax(y_pred, axis=1) == np.argmax(y, axis=1))
+                y_pred_full = self.forward(x)
+                loss = -np.mean(np.sum(y * np.log(np.clip(y_pred_full, 1e-7, 1 - 1e-7)), axis=1))
+                acc = np.mean(np.argmax(y_pred_full, axis=1) == np.argmax(y, axis=1))
                 print(f"Epoch {epoch:3d} | loss: {loss:.4f} | acc: {acc:.4f}")
